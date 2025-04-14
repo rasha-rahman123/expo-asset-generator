@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expo Asset Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .preview {
+        margin: 20px 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+      .preview-item {
+        text-align: center;
+        background: #fff;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .preview-item img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+      .preview-item p {
+        margin: 5px 0;
+        font-size: 14px;
+        color: #666;
+      }
+      button {
+        background: #007aff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .color-picker {
+        margin: 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .download-all {
+        margin-top: 20px;
+        width: 100%;
+      }
+      .instructions {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+      }
+      .file-input-wrapper {
+        margin: 20px 0;
+      }
+      #logoInput {
+        margin-bottom: 10px;
+      }
+      .post-download-instructions {
+        display: none;
+        margin-top: 20px;
+        padding: 15px;
+        background: #e8f5e9;
+        border-radius: 6px;
+        border-left: 4px solid #4caf50;
+      }
+      .post-download-instructions.visible {
+        display: block;
+      }
+      .post-download-instructions code {
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+      .platform-specific {
+        margin-top: 10px;
+        padding-left: 20px;
+      }
+      .download-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .download-zip {
+        background: #34c759;
+      }
+      .download-zip:hover {
+        background: #248a3d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Expo Asset Generator</h1>
+
+      <div class="instructions">
+        <h3>How to use:</h3>
+        <ol>
+          <li>Upload your logo (preferably a square PNG with transparency)</li>
+          <li>Choose a background color for the icons</li>
+          <li>Preview the generated assets</li>
+          <li>Download individual assets or all at once</li>
+        </ol>
+      </div>
+
+      <div class="file-input-wrapper">
+        <input type="file" id="logoInput" accept="image/*" />
+      </div>
+
+      <div class="color-picker">
+        <label for="backgroundColor">Background Color: </label>
+        <input type="color" id="backgroundColor" value="#FFFFFF" />
+      </div>
+
+      <div class="preview" id="preview"></div>
+
+      <div class="download-buttons">
+        <button id="downloadAll" class="download-all" disabled>
+          Download Individual Files
+        </button>
+        <button id="downloadZip" class="download-all download-zip" disabled>
+          Download as ZIP
+        </button>
+      </div>
+
+      <div class="post-download-instructions" id="postInstructions">
+        <h3>📱 Where to put your files:</h3>
+        <p>
+          1. Create the following directory structure in your Expo project if it
+          doesn't exist:
+        </p>
+        <pre>
+assets/
+  ├── images/
+  │   ├── icon.png           (1024×1024)
+  │   ├── adaptive-icon.png  (1024×1024)
+  │   ├── splash-icon.png    (200×200)
+  │   └── favicon.png        (32×32)
+        </pre>
+
+        <p>2. Update your <code>app.json</code> to reference these files:</p>
+        <pre>
+{
+  "expo": {
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"  // Use your chosen background color
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"  // Use your chosen background color
+      }
+    }
+  }
+}</pre
+        >
+
+        <div class="platform-specific">
+          <p>
+            <strong>Note:</strong> Expo will automatically generate all required
+            sizes for each platform from these base assets.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const ASSETS = [
+        { name: "icon.png", size: 1024, description: "Main app icon" },
+        {
+          name: "adaptive-icon.png",
+          size: 1024,
+          description: "Android adaptive icon",
+        },
+        { name: "favicon.png", size: 32, description: "Web favicon" },
+        {
+          name: "splash-icon.png",
+          size: 200,
+          description: "Splash screen icon",
+        },
+      ];
+
+      let originalImage = null;
+
+      function createCanvas(size) {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        return canvas;
+      }
+
+      function drawImage(canvas, image, backgroundColor) {
+        const ctx = canvas.getContext("2d");
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw background
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Calculate scaling to fit and center the image
+        const scale =
+          Math.min(canvas.width / image.width, canvas.height / image.height) *
+          0.8; // 80% of the container size for padding
+
+        const scaledWidth = image.width * scale;
+        const scaledHeight = image.height * scale;
+        const x = (canvas.width - scaledWidth) / 2;
+        const y = (canvas.height - scaledHeight) / 2;
+
+        // Draw the image
+        ctx.drawImage(image, x, y, scaledWidth, scaledHeight);
+      }
+
+      function createPreviewItem(name, canvas) {
+        const div = document.createElement("div");
+        div.className = "preview-item";
+
+        // Create an image element instead of using canvas directly
+        const img = document.createElement("img");
+        img.src = canvas.toDataURL("image/png");
+        div.appendChild(img);
+
+        const p = document.createElement("p");
+        p.textContent = `${name} (${canvas.width}x${canvas.height})`;
+        div.appendChild(p);
+
+        const downloadBtn = document.createElement("button");
+        downloadBtn.textContent = "Download";
+        downloadBtn.onclick = () => {
+          const link = document.createElement("a");
+          link.download = name;
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+        };
+        div.appendChild(downloadBtn);
+
+        return div;
+      }
+
+      async function downloadZip() {
+        const backgroundColor =
+          document.getElementById("backgroundColor").value;
+        const zip = new JSZip();
+        const imagesFolder = zip.folder("assets/images");
+
+        // Add each asset to the zip
+        for (const { name, size } of ASSETS) {
+          const canvas = createCanvas(size);
+          drawImage(canvas, originalImage, backgroundColor);
+
+          // Convert canvas to blob
+          const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, "image/png");
+          });
+
+          imagesFolder.file(name, blob);
+        }
+
+        // Generate and download zip
+        const content = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement("a");
+        link.download = "expo-assets.zip";
+        link.href = URL.createObjectURL(content);
+        link.click();
+
+        // Show post-download instructions
+        document.getElementById("postInstructions").classList.add("visible");
+      }
+
+      function updatePreviews() {
+        if (!originalImage) return;
+
+        const preview = document.getElementById("preview");
+        preview.innerHTML = "";
+        const backgroundColor =
+          document.getElementById("backgroundColor").value;
+
+        ASSETS.forEach(({ name, size }) => {
+          const canvas = createCanvas(size);
+          drawImage(canvas, originalImage, backgroundColor);
+          preview.appendChild(createPreviewItem(name, canvas));
+        });
+
+        document.getElementById("downloadAll").disabled = false;
+        document.getElementById("downloadZip").disabled = false;
+      }
+
+      document.getElementById("logoInput").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            originalImage = new Image();
+            originalImage.onload = updatePreviews;
+            originalImage.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      document
+        .getElementById("backgroundColor")
+        .addEventListener("change", updatePreviews);
+      document
+        .getElementById("downloadAll")
+        .addEventListener("click", updatePreviews);
+      document
+        .getElementById("downloadZip")
+        .addEventListener("click", downloadZip);
+    </script>
+  </body>
+</html>
