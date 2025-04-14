@@ -21,7 +21,7 @@ A simple, browser-based tool to generate all required assets for your Expo app f
 
 ## 🔧 How to Use
 
-1. Visit [https://[rasha-rahman123].github.io/expo-asset-generator](https://[rasha-rahman123].github.io/expo-asset-generator)
+1. Visit [https://rasha-rahman123.github.io/expo-asset-generator](https://rasha-rahman123.github.io/expo-asset-generator)
 2. Upload your logo (preferably a square PNG with transparency)
 3. Choose a background color
 4. Download the ZIP file
